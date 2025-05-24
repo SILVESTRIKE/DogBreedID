@@ -1,5 +1,5 @@
 streamlit
-tensorflow
+tensorflow==2.15.0  # Phiên bản ổn định cho Python 3.9
 numpy
 pillow
 matplotlib
