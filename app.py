@@ -11,10 +11,10 @@ from io import BytesIO
 
 # Định nghĩa tham số
 IMG_SIZE = (299, 299)
-MODEL_PATH = 'https://huggingface.co/HakuDevon/DogBreed/dog_breed_classifier.h5'
-CLASS_NAMES_PATH = './class_names.txt'
-HISTORY_PATH = './history.pkl'
-PREDICTION_HISTORY_PATH = './prediction_history.pkl'
+MODEL_PATH = 'HakuDevon/DogBreed/'
+CLASS_NAMES_PATH = '/class_names.txt'
+HISTORY_PATH = '/history.pkl'
+PREDICTION_HISTORY_PATH = '/prediction_history.pkl'
 
 # Tải danh sách giống chó từ file
 if not os.path.exists(CLASS_NAMES_PATH):
