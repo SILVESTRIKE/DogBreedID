@@ -8,17 +8,18 @@ import pickle
 from datetime import datetime
 import base64
 from io import BytesIO
+from huggingface_hub import hf_hub_download
 
 # Định nghĩa tham số
 IMG_SIZE = (299, 299)
-MODEL_PATH = 'HakuDevon/DogBreed/'
-CLASS_NAMES_PATH = '/class_names.txt'
-HISTORY_PATH = '/history.pkl'
-PREDICTION_HISTORY_PATH = '/prediction_history.pkl'
+MODEL_PATH = hf_hub_download(repo_id="HakuDevon/DogBreed", filename="dog_breed_classifier.h5")
+CLASS_NAMES_PATH = 'class_names.txt'
+HISTORY_PATH = 'history.pkl'
+PREDICTION_HISTORY_PATH = 'prediction_history.pkl'
 
 # Tải danh sách giống chó từ file
 if not os.path.exists(CLASS_NAMES_PATH):
-    st.error(f"Class names file {CLASS_NAMES_PATH} not found. Please download it from Colab.")
+    st.error(f"Class names file {CLASS_NAMES_PATH} not found.")
     st.stop()
 with open(CLASS_NAMES_PATH, 'r') as f:
     class_names = [line.strip() for line in f.readlines()]
