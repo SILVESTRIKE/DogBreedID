@@ -1,6 +1,6 @@
-streamlit==1.45.1
-tensorflow==2.15.0
-numpy==1.26.4
-pillow==10.4.0
-matplotlib==3.9.2
-huggingface_hub==0.26.0
+streamlit
+tensorflow
+numpy
+pillow
+matplotlib
+huggingface_hub
