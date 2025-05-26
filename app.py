@@ -11,10 +11,11 @@ from io import BytesIO
 from huggingface_hub import hf_hub_download
 
 # Định nghĩa tham số
-IMG_SIZE = (299, 299)
-MODEL_PATH = hf_hub_download(repo_id="HakuDevon/DogBreed", filename="dog_breed_classifier.h5")
+INCEPTION_MODEL_PATH = hf_hub_download(repo_id="HakuDevon/DogBreed", filename="dog_breed_classifier.h5")
+CNN_MODEL_PATH = hf_hub_download(repo_id="HakuDevon/DogBreed", filename="dog_breed_classifier_cnn.h5")
 CLASS_NAMES_PATH = 'class_names.txt'
-HISTORY_PATH = 'history.pkl'
+INCEPTION_HISTORY_PATH = 'inception_history.pkl'
+CNN_HISTORY_PATH = 'cnn_history.pkl'
 PREDICTION_HISTORY_PATH = 'prediction_history.pkl'
 
 # Tải danh sách giống chó từ file
@@ -24,19 +25,26 @@ if not os.path.exists(CLASS_NAMES_PATH):
 with open(CLASS_NAMES_PATH, 'r') as f:
     class_names = [line.strip() for line in f.readlines()]
 
-# Tải mô hình đã huấn luyện
+# Tải cả hai mô hình đã huấn luyện
 @st.cache_resource
-def load_model():
-    if not os.path.exists(MODEL_PATH):
-        st.error(f"Model file {MODEL_PATH} not found. Please ensure it is in the same directory as app.py.")
+def load_models():
+    models = {}
+    if not os.path.exists(INCEPTION_MODEL_PATH):
+        st.error(f"InceptionV3 model file {INCEPTION_MODEL_PATH} not found.")
         st.stop()
-    return tf.keras.models.load_model(MODEL_PATH)
+    models['InceptionV3'] = tf.keras.models.load_model(INCEPTION_MODEL_PATH)
+    if not os.path.exists(CNN_MODEL_PATH):
+        st.error(f"CNN model file {CNN_MODEL_PATH} not found. ")
+        st.stop()
+    models['CNN'] = tf.keras.models.load_model(CNN_MODEL_PATH)
+    return models
 
-model = load_model()
+models = load_models()
 
 # Hàm dự đoán trên một ảnh
 def predict_image(image, model, class_names):
-    img = image.resize(IMG_SIZE)
+    img_size = (299, 299) if model_choice == 'InceptionV3' else (224, 224)
+    img = image.resize(img_size)
     img_array = tf.keras.preprocessing.image.img_to_array(img) / 255.0
     img_array = np.expand_dims(img_array, axis=0)
     prediction = model.predict(img_array, verbose=0)
@@ -85,44 +93,33 @@ def load_prediction_history():
 
 # Tải dữ liệu lịch sử huấn luyện từ file .pkl
 @st.cache_data
-def load_training_history():
-    if os.path.exists(HISTORY_PATH):
-        try:
-            with open(HISTORY_PATH, 'rb') as f:
-                training_history = pickle.load(f)
-            history_data = training_history.get('initial', {
-                'loss': [0.5, 0.45, 0.4, 0.35, 0.3, 0.28, 0.25, 0.23, 0.2, 0.18],
-                'val_loss': [0.55, 0.5, 0.48, 0.45, 0.43, 0.42, 0.41, 0.4, 0.39, 0.38],
-                'accuracy': [0.65, 0.68, 0.72, 0.75, 0.78, 0.8, 0.82, 0.83, 0.85, 0.86],
-                'val_accuracy': [0.62, 0.65, 0.67, 0.69, 0.71, 0.72, 0.73, 0.74, 0.75, 0.76]
-            })
-            history_fine_data = training_history.get('fine_tuning', {
-                'loss': [0.18, 0.16, 0.14, 0.12, 0.1],
-                'val_loss': [0.38, 0.37, 0.36, 0.35, 0.34],
-                'accuracy': [0.86, 0.87, 0.88, 0.89, 0.9],
-                'val_accuracy': [0.76, 0.77, 0.78, 0.79, 0.8]
-            })
-            return history_data, history_fine_data
-        except Exception as e:
-            st.warning(f"Error reading training history file: {e}. Using placeholder data.")
-    else:
-        st.warning("Training history file not found. Using placeholder data.")
-    history_data = {
+def load_training_history(model_choice):
+    history_path = INCEPTION_HISTORY_PATH if model_choice == 'InceptionV3' else CNN_HISTORY_PATH
+    placeholder_data = {
         'loss': [0.5, 0.45, 0.4, 0.35, 0.3, 0.28, 0.25, 0.23, 0.2, 0.18],
         'val_loss': [0.55, 0.5, 0.48, 0.45, 0.43, 0.42, 0.41, 0.4, 0.39, 0.38],
         'accuracy': [0.65, 0.68, 0.72, 0.75, 0.78, 0.8, 0.82, 0.83, 0.85, 0.86],
         'val_accuracy': [0.62, 0.65, 0.67, 0.69, 0.71, 0.72, 0.73, 0.74, 0.75, 0.76]
     }
-    history_fine_data = {
+    placeholder_fine_data = {
         'loss': [0.18, 0.16, 0.14, 0.12, 0.1],
         'val_loss': [0.38, 0.37, 0.36, 0.35, 0.34],
         'accuracy': [0.86, 0.87, 0.88, 0.89, 0.9],
         'val_accuracy': [0.76, 0.77, 0.78, 0.79, 0.8]
     }
-    return history_data, history_fine_data
 
-# Tải lịch sử huấn luyện
-history_data, history_fine_data = load_training_history()
+    if os.path.exists(history_path):
+        try:
+            with open(history_path, 'rb') as f:
+                training_history = pickle.load(f)
+            history_data = training_history.get('initial', training_history if 'loss' in training_history else placeholder_data)
+            history_fine_data = training_history.get('fine_tuning', placeholder_fine_data)
+            return history_data, history_fine_data
+        except Exception as e:
+            st.warning(f"Error reading {history_path}: {e}. Using placeholder data.")
+    else:
+        st.warning(f"{history_path} not found. Using placeholder data.")
+    return placeholder_data, placeholder_fine_data
 
 # Tải lịch sử dự đoán vào session_state
 if 'prediction_history' not in st.session_state:
@@ -142,6 +139,10 @@ tab1, tab2, tab3, tab4 = st.tabs(["Classifier", "Charts", "Statistics", "History
 # Tab 1: Classifier
 with tab1:
     st.title("Dog Breed Classifier")
+
+    # Combobox chọn mô hình
+    model_choice = st.selectbox("Select Model", ["InceptionV3", "CNN"], key="model_select")
+    selected_model = models[model_choice]
 
     # Tải nhiều ảnh cùng lúc
     uploaded_files = st.file_uploader("Choose images...", type=["jpg", "jpeg", "png"], accept_multiple_files=True, key="file_uploader")
@@ -221,7 +222,7 @@ with tab1:
             progress_bar.progress((idx + 1) / total_images)
 
             image = Image.open(uploaded_file).convert("RGB")
-            breed, probabilities, predicted_class = predict_image(image, model, class_names)
+            breed, probabilities, predicted_class = predict_image(image, selected_model, class_names)
             confidence = probabilities[predicted_class]
 
             top_k = 5
@@ -240,7 +241,8 @@ with tab1:
                 "feedback": "Not rated",
                 "filename": uploaded_file.name,
                 "top_labels": top_labels,
-                "top_probs": top_probs
+                "top_probs": top_probs,
+                "model": model_choice
             }
             st.session_state.predictions.append(prediction_entry)
             st.session_state.prediction_history.append(prediction_entry)
@@ -253,7 +255,7 @@ with tab1:
     # Hiển thị kết quả dự đoán và feedback
     if st.session_state.predictions:
         for idx, prediction in enumerate(st.session_state.predictions):
-            st.subheader(f"Prediction for {prediction['filename']}")
+            st.subheader(f"Prediction for {prediction['filename']} (Model: {prediction['model']})")
             col1, col2 = st.columns([1, 1])
             with col1:
                 st.image(base64_to_image(prediction['image']), use_container_width=True)
@@ -294,7 +296,10 @@ with tab1:
 with tab2:
     st.title("Training Charts")
 
-    st.subheader("Initial Training")
+    # Tải lịch sử huấn luyện dựa trên mô hình đã chọn
+    history_data, history_fine_data = load_training_history(st.session_state.get('model_select', 'InceptionV3'))
+
+    st.subheader(f"{st.session_state.get('model_select', 'InceptionV3')} Initial Training")
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))
     ax1.plot(history_data['loss'], label='Train Loss', color='blue')
     ax1.plot(history_data['val_loss'], label='Validation Loss', color='orange')
@@ -312,7 +317,7 @@ with tab2:
     st.pyplot(fig)
 
     if 'loss' in history_fine_data:
-        st.subheader("Fine-Tuning")
+        st.subheader(f"{st.session_state.get('model_select', 'InceptionV3')} Fine-Tuning")
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))
         ax1.plot(history_fine_data['loss'], label='Train Loss (Fine-tuning)', color='blue')
         ax1.plot(history_fine_data['val_loss'], label='Validation Loss (Fine-tuning)', color='orange')
@@ -351,7 +356,6 @@ with tab3:
     st.title("Statistics")
 
     if st.session_state.prediction_history:
-        # Tính toán thống kê với bộ nhớ đệm
         total_predictions, correct, incorrect, not_rated, top_breeds = compute_statistics(st.session_state.prediction_history)
 
         st.write(f"Total Predictions: {total_predictions}")
@@ -359,7 +363,6 @@ with tab3:
         st.write(f"Incorrect Predictions: {incorrect}")
         st.write(f"Not Rated: {not_rated}")
 
-        # CSS để hiển thị hai biểu đồ trên cùng một hàng
         st.markdown("""
             <style>
             .chart-container {
@@ -381,7 +384,6 @@ with tab3:
             </style>
         """, unsafe_allow_html=True)
 
-        # Hiển thị hai biểu đồ trên cùng một hàng
         if correct + incorrect > 0 or top_breeds:
             st.markdown('<div class="chart-container">', unsafe_allow_html=True)
             col1, col2 = st.columns([1, 1])
@@ -404,7 +406,6 @@ with tab3:
                     ax.set_title("Prediction Accuracy")
                     st.pyplot(fig)
 
-
             st.markdown('</div>', unsafe_allow_html=True)
     else:
         st.info("No predictions yet. Make a prediction in the Classifier tab to see statistics.")
@@ -421,13 +422,12 @@ with tab4:
                 image = base64_to_image(entry['image'])
                 st.image(image, width=50)
             with col2:
-                st.write(f"Breed: {entry['breed']}, Confidence: {entry['confidence']:.2%}, Timestamp: {entry['timestamp']}, Feedback: {entry['feedback']}")
+                st.write(f"Breed: {entry['breed']}, Confidence: {entry['confidence']:.2%}, Timestamp: {entry['timestamp']}, Feedback: {entry['feedback']}, Model: {entry['model']}")
                 detail_key = f"detail_{idx}"
                 button_label = "Hide Details" if st.session_state.show_details.get(detail_key, False) else "View Details"
                 if st.button(button_label, key=f"toggle_{idx}"):
-                    # Đảo ngược trạng thái hiển thị/ẩn và render lại ngay lập tức
                     st.session_state.show_details[detail_key] = not st.session_state.show_details.get(detail_key, False)
-                    st.rerun()  # Render lại để cập nhật giao diện
+                    st.rerun()
                 if st.session_state.show_details.get(detail_key, False):
                     with st.container():
                         st.subheader("Selected Prediction Details")
@@ -436,6 +436,7 @@ with tab4:
                         st.write(f"Confidence: {entry['confidence']:.2%}")
                         st.write(f"Timestamp: {entry['timestamp']}")
                         st.write(f"Feedback: {entry['feedback']}")
+                        st.write(f"Model: {entry['model']}")
 
         if st.button("Clear History"):
             st.session_state.prediction_history = []
