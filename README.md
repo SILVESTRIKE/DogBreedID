@@ -10,6 +10,7 @@
 - [Cài đặt thư viện cần thiết](#cài-đặt-thư-viện-cần-thiết)
 - [Chạy ứng dụng Streamlit](#chạy-ứng-dụng-streamlit)
 - [Cách sử dụng ứng dụng](#cách-sử-dụng-ứng-dụng)
+- [Truy cập bản demo trực tuyến](#truy-cập-bản-demo-trực-tuyến)
 - [Tài liệu tham khảo](#tài-liệu-tham-khảo)
 
 ---
@@ -70,6 +71,11 @@ Sau khi chạy, Streamlit sẽ mở trang web trên trình duyệt, thường t�
 2. Tải lên ảnh một chú chó bằng nút "Browse files" hoặc "Chọn tệp".
 3. Ấn nút dự đoán (nếu có), hoặc ứng dụng sẽ tự động hiện kết quả dự đoán giống chó.
 4. Xem kết quả dự đoán và các thông tin liên quan.
+
+## Truy cập bản demo trực tuyến
+
+Bạn có thể dùng thử ứng dụng ngay tại đây (không cần cài đặt gì):
+👉 [https://dogbreedid.streamlit.app/](https://dogbreedid.streamlit.app/)
 
 ## Lưu ý
 
